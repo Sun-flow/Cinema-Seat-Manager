@@ -1,6 +1,6 @@
 # AGENTS.md: Agent Entry Point
 
-> **For AI coding agents.** Start here every session, whatever tool or environment you run in. `CLAUDE.md` and `.github/copilot-instructions.md` point here; keep instructions in this file only.
+> **For AI coding agents.** Start here every session, whatever tool or environment you run in. `CLAUDE.md` points here; keep instructions in this file only.
 
 ## Project: Cinema Seat Manager
 

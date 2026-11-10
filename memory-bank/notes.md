@@ -7,7 +7,8 @@
 
 - The spec is mae's and is binding. When it's ambiguous, ask rather than pick silently, and record the answer in `decisions.md`.
 - Confirm a plan with mae before building anything. Answering a question or settling a decision is not a go-ahead to start building. (Carried over from mae's earlier projects.)
-- mae works in more than one environment (Claude Code in the cloud, and GitHub Copilot in a Codespace on earlier projects). Nothing outside the repo carries over between them, so anything worth keeping goes in this folder or `docs/`.
+- Claude Code is the only agent on this project for now (2026-11-10), so only `CLAUDE.md` points to `AGENTS.md`. If mae brings in another tool, add its one-line pointer (see `.agents/prompts/memory-bank.md`, "Entry point").
+- Nothing outside the repo carries over between sessions or environments, so anything worth keeping goes in this folder or `docs/`.
 
 ## Environment and tools
 
