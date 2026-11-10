@@ -3,6 +3,13 @@
 > **Last updated**: 2026-11-10
 > Decisions with lasting consequences, newest first. Each entry: date and title, decision, rationale, alternatives considered, status. The repo has no other decision log, so this is it.
 
+### 2026-11-10: Node.js runs the TypeScript directly; `node:test` for tests
+
+- **Decision**: Node.js 22.18 or later runs the TypeScript files directly through its built-in type stripping. `typescript` is the only dependency, used for `tsc --noEmit` type checks. Tests use the built-in `node:test` and `node:assert`.
+- **Rationale**: one dependency and almost no configuration suits a small prototype. Type stripping can't handle enums or namespaces, which the spec doesn't need; it already rules out classes (§2).
+- **Alternatives**: compiling with `tsc` to JavaScript first (an extra build step and output folder); `tsx` plus Vitest (two more dependencies). mae chose Node.
+- **Status**: active.
+
 ### 2026-11-10: Claude Code is the only agent tool for now
 
 - **Decision**: only `CLAUDE.md` points to `AGENTS.md`; the GitHub Copilot pointer added during setup was removed.

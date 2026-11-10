@@ -15,14 +15,15 @@ mae, as a prototype. The people using it are whoever runs it at a terminal.
 ## Stack
 
 - Language: TypeScript (§1).
-- Runtime, package manager, compiler setup and test runner: ❓ not chosen yet. No package.json or tsconfig.json exists yet. See the open question in `status.md`.
+- Runtime: Node.js 22.18 or later, running the TypeScript directly; `tsc` only type-checks; tests use `node:test` (`decisions.md`).
+- Not scaffolded yet: there is no package.json. The planned scripts are in `docs/plan.md` ("Tooling").
 
 ## Commands
 
 | Task | Command |
 |---|---|
 | Check the memory bank | `python3 scripts/check-memory.py` |
-| Install, build, run, test | ❓ none yet: add them here when the project is scaffolded. |
+| Install, run, type-check, test | Planned in `docs/plan.md` ("Tooling"); move them here once they exist. |
 
 ## Architecture
 
@@ -33,6 +34,7 @@ Planned, not built yet. All state is one 8 x 10 2D array of `0` (available) and 
 | Kind of fact | Where |
 |---|---|
 | Requirements: data model, display, functions, tests, code style | `docs/spec.md` |
+| How the build is laid out: files, functions, messages, commands, tests | `docs/plan.md` |
 | How open points in the spec were settled, and why | `memory-bank/decisions.md` |
 | Current state, next steps, open questions | `memory-bank/status.md` |
 | What each session did | `memory-bank/log.md` |

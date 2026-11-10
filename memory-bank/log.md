@@ -6,7 +6,7 @@
 ### 2026-11-10: open questions settled (Claude Code, cloud)
 
 - mae answered numbering, seat values, pair search order, invalid input, interaction mode and agent tooling; each is in `decisions.md`. Removed the Copilot pointer, since Claude Code is the only agent for now.
-- Left open: tooling. A recommendation is with mae (see `status.md`). Then a build plan, before any code.
+- mae then chose Node.js tooling. Wrote the build plan in `docs/plan.md`; it waits for mae's approval before any code.
 
 ### 2026-11-10: memory bank set up (Claude Code, cloud)
 
