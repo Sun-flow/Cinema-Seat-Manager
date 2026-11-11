@@ -26,6 +26,9 @@ Node.js 22.18 or later runs the TypeScript files directly (type stripping). `typ
 | `test/fixtures.ts` | The four room states from §5 as literal 2D arrays. |
 | `test/seats.test.ts` | Tests for every function against every room state. |
 | `test/cli.test.ts` | Tests for command parsing and invalid input. |
+| `src/server.ts`, `src/web.ts` | Local web server and its entry point (added 2026-11-11, see `memory-bank/decisions.md`). |
+| `web/index.html` | The web page. |
+| `test/server.test.ts` | Tests for the web API and saving. |
 
 ## 3. Data
 

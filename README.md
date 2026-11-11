@@ -1,6 +1,6 @@
 # Cinema Seat Manager
 
-A TypeScript command-line prototype for managing seat reservations in a cinema screening room of 8 rows by 10 columns. The requirements are in [docs/spec.md](docs/spec.md) and the design in [docs/plan.md](docs/plan.md).
+A TypeScript command-line and local web prototype for managing seat reservations in a cinema screening room of 8 rows by 10 columns. The requirements are in [docs/spec.md](docs/spec.md) and the design in [docs/plan.md](docs/plan.md).
 
 ## Run it
 
@@ -22,6 +22,14 @@ Then type commands at the `>` prompt:
 | `pair` | Finds the first two adjacent available seats in a row. |
 | `help` | Lists the commands. |
 | `quit` | Exits. |
+
+## Web interface
+
+```
+npm run web
+```
+
+Then open http://localhost:3000. It runs the same seat functions as the command line: click an available seat to reserve it, click a reserved seat twice to cancel it, and use the buttons for the adjacent pair search, occupancy and the text view. **Save** writes the room to `reservations/<date>.json`; when the server starts it loads today's file if there is one. Set `PORT` to use another port. The page loads Tailwind CSS from a CDN, so the browser needs internet access.
 
 ## Check it
 

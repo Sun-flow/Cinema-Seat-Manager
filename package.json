@@ -1,7 +1,7 @@
 {
   "name": "cinema-seat-manager",
   "version": "0.1.0",
-  "description": "Command-line prototype for managing seat reservations in one cinema screening room.",
+  "description": "Command-line and local web prototype for managing seat reservations in one cinema screening room.",
   "private": true,
   "type": "module",
   "engines": {
@@ -9,6 +9,7 @@
   },
   "scripts": {
     "start": "node src/main.ts",
+    "web": "node src/web.ts",
     "typecheck": "tsc --noEmit",
     "test": "node --test test/*.test.ts"
   },
