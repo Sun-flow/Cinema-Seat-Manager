@@ -3,6 +3,13 @@
 > **Last updated**: 2026-11-11
 > Decisions with lasting consequences, newest first. Each entry: date and title, decision, rationale, alternatives considered, status. The repo has no other decision log, so this is it.
 
+### 2026-11-11: GitHub Pages runs the seat code in the browser
+
+- **Decision**: a workflow publishes a static copy of the page to GitHub Pages on every push to main, after typecheck and tests. The build inlines the real TypeScript sources with Node's `stripTypeScriptTypes`, so there is still one implementation. On Pages, Save stores the room in localStorage and downloads <date>.json; Load opens a saved file. mae set Pages' source to GitHub Actions.
+- **Rationale**: mae asked for the repo to host the page passively. Pages can't run the Node server, so saving can't write to the repo from there.
+- **Alternatives**: committing saves to the repo through a GitHub API token or a serverless function (needs credentials and a service; offered, not chosen); a bundler such as esbuild (another dependency for what type stripping already does).
+- **Status**: active.
+
 ### 2026-11-11: Clicks build a selection of any free seats
 
 - **Decision**: clicking an available seat adds it to the selection (clicking it again removes it); seats don't have to be neighbours or in the same row. A drag adds its run to the selection. While anything is selected, clicking a reserved seat does nothing; with nothing selected it still arms cancel. Reserve sends one seat as `reserve r c`, an unbroken run in one row as `reserve r a-b` (so clicking seats in order behaves like a drag), and anything else as `reserve r c r c ...`, which goes to the new `reserveSeatList()`: all or nothing, each seat through `reserveSeat()`.

@@ -10,8 +10,9 @@
   "scripts": {
     "start": "node src/main.ts",
     "web": "node src/web.ts",
+    "build:pages": "node --disable-warning=ExperimentalWarning scripts/build-pages.ts",
     "typecheck": "tsc --noEmit",
-    "test": "node --test test/*.test.ts"
+    "test": "node --disable-warning=ExperimentalWarning --test test/*.test.ts"
   },
   "devDependencies": {
     "@types/node": "^22.20.5",

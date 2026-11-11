@@ -17,6 +17,8 @@
 
 - The cloud container can't reach cdn.jsdelivr.net (403 from the proxy). To screenshot the web page there, `npm i @tailwindcss/browser` in a scratch folder and have Playwright route the CDN URL to its dist/index.global.js.
 
+- `stripTypeScriptTypes` from node:module is still marked experimental on Node 22, so the build and test scripts pass `--disable-warning=ExperimentalWarning`.
+
 ## Conventions
 
 - Nothing yet beyond `docs/spec.md`.
