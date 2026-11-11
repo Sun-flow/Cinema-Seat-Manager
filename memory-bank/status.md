@@ -1,11 +1,12 @@
 # Status
 
-> **Last updated**: 2026-11-10
+> **Last updated**: 2026-11-11
 
 ## Works
 
 - The memory bank, `AGENTS.md`, `CLAUDE.md` and `scripts/check-memory.py` (2026-11-10).
 - The requirements are written down in `docs/spec.md` (2026-11-10).
+- The program, built to `docs/plan.md`: all six §4 functions, the command loop, and 42 tests covering the four §5 room states and invalid input (2026-11-11). `npm run typecheck` and `npm test` pass.
 - mae settled tooling, numbering, seat values, pair search order, invalid input, interaction mode and agent tooling (2026-11-10); see `decisions.md`.
 
 ## In progress
@@ -14,12 +15,12 @@
 
 ## Next
 
-1. mae reviews `docs/plan.md`. Build nothing until mae approves it.
-2. Then follow `docs/plan.md` ("Order of work"): scaffold, the seat functions with tests, the command loop with tests.
+1. mae reviews and merges PR #1 (memory bank, spec, plan and the program together).
+2. Nothing else is planned. Ask mae before adding features beyond `docs/spec.md`.
 
 ## Open questions
 
-- **Build plan** (2026-11-10): `docs/plan.md` is waiting for mae's approval.
+- None.
 
 ## Known problems
 

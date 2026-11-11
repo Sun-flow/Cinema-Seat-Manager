@@ -1,7 +1,13 @@
 # Log
 
-> **Last updated**: 2026-11-10
+> **Last updated**: 2026-11-11
 > Session handoffs, newest first. One short entry per session: date, where it ran, what changed (link the PR or commit), and what was left open.
+
+### 2026-11-11: program built (Claude Code, cloud)
+
+- mae approved `docs/plan.md`. Built `src/seats.ts`, `src/cli.ts`, `src/main.ts` and the tests in `test/`, on PR #1 (branch claude/project-thread-nb962l). 42 tests pass; typecheck is clean; the loop was tried by hand with piped input.
+- Small additions to the plan: a legend line under the display, the total seat count in the stats message, and an `ERROR:` message if a command throws unexpectedly.
+- Left open: nothing; waiting on mae's review.
 
 ### 2026-11-10: open questions settled (Claude Code, cloud)
 

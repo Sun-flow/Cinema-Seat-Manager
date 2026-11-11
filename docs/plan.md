@@ -1,7 +1,7 @@
 # Build Plan
 
 > **Last updated**: 2026-11-10
-> **Status**: proposed, waiting for mae's approval. Nothing here is built yet.
+> **Status**: approved by mae and built on 2026-11-11. The code is now the source of truth; this file records the design.
 > Implements `docs/spec.md` (cited as §N) together with the decisions in `memory-bank/decisions.md`.
 
 ## 1. Tooling

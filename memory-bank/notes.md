@@ -12,6 +12,7 @@
 
 ## Environment and tools
 
+- `node src/main.ts` and `node --test` run TypeScript directly with no warning on Node 22.18+. Imports between files must use the .ts extension (`tsconfig.json` allows it); `erasableSyntaxOnly` makes `tsc` reject enums and other syntax Node can't strip.
 - `scripts/check-memory.py` needs only Python 3. It fails on any backticked path in the bank or `AGENTS.md` that doesn't exist, so don't backtick paths for files that haven't been created yet.
 
 ## Conventions
