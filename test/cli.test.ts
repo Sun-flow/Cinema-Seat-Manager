@@ -7,7 +7,7 @@ import { describe, test } from "node:test";
 import assert from "node:assert/strict";
 import { PassThrough } from "node:stream";
 import { HELP_TEXT, parseSeatNumber, runCommand, startLoop } from "../src/cli.ts";
-import { formatRoom } from "../src/seats.ts";
+import { countOccupancy, formatRoom } from "../src/seats.ts";
 import { emptyRoom, fullRoom, nearlyFullRoom, partialRoom } from "./fixtures.ts";
 
 describe("parseSeatNumber", () => {
@@ -146,6 +146,27 @@ describe("reserve with a column range", () => {
     ]);
     assert.deepEqual(runCommand(room, "cancel 2 3-5"), [
       'INVALID INPUT: Column must be a whole number from 1 to 10 (got "3-5").',
+      false,
+    ]);
+    assert.deepEqual(room, emptyRoom());
+  });
+});
+
+describe("reserve with several seats", () => {
+  test("reserves every row and column pair", () => {
+    const room = emptyRoom();
+    assert.deepEqual(runCommand(room, "reserve 2 3 5 7"), [
+      "SUCCESS: Reserved 2 seats: row 2 column 3, row 5 column 7.",
+      false,
+    ]);
+    assert.deepEqual(countOccupancy(room), [2, 78]);
+  });
+
+  test("reports a bad pair as invalid input and changes nothing", () => {
+    const room = emptyRoom();
+    assert.deepEqual(runCommand(room, "reserve 2 3 9 7"), ['INVALID INPUT: Row must be a whole number from 1 to 8 (got "9").', false]);
+    assert.deepEqual(runCommand(room, "reserve 2 3 5"), [
+      'INVALID INPUT: "reserve" needs a row and a column, for example "reserve 3 5" (got 3 arguments).',
       false,
     ]);
     assert.deepEqual(room, emptyRoom());

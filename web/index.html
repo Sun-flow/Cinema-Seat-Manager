@@ -121,10 +121,14 @@
     let armed = null;
     /** The timer that disarms the seat above. */
     let armTimer = 0;
-    /** The seats picked by click and drag, as [row, firstCol, lastCol], or null. */
-    let selection = null;
-    /** While the pointer is held down: [row, col] of the seat the drag started on, or null. */
+    /** The seats picked by clicking and dragging, as a sorted list of [row, col]. */
+    let selection = [];
+    /** While the pointer is held down: [row, col] of the seat the press started on, or null. */
     let dragStart = null;
+    /** The selection as it was when the press started; a drag adds its range to it. */
+    let dragBase = [];
+    /** Whether the pointer has moved to another seat since the press started. */
+    let dragMoved = false;
     /** Whether "New room" is waiting for a second click. */
     let newArmed = false;
 
@@ -189,7 +193,7 @@
     function render(data) {
       if (Array.isArray(data.room)) {
         if (JSON.stringify(data.room) !== JSON.stringify(room)) showPair = false;
-        if (selection !== null && data.room[selection[0] - 1].slice(selection[1] - 1, selection[2]).includes(1)) selection = null;
+        selection = selection.filter(([r, c]) => data.room[r - 1][c - 1] === 0);
         room = data.room;
         pair = data.pair ?? null;
         $("available").textContent = data.available;
@@ -271,7 +275,7 @@
         for (let c = 1; c <= COLS; c++) {
           const reserved = room[r - 1]?.[c - 1] === 1;
           const isArmed = armed !== null && armed[0] === r && armed[1] === c;
-          const isSelected = selection !== null && selection[0] === r && c >= selection[1] && c <= selection[2];
+          const isSelected = isSelectedSeat(r, c);
           const seat = document.createElement("button");
           seat.type = "button";
           seat.dataset.row = r;
@@ -301,23 +305,74 @@
     }
 
     /**
+     * Tells whether a seat is in the selection.
+     * Inputs: row and col, counted from 1. Outputs: true or false.
+     * Example: isSelectedSeat(3, 5);
+     */
+    function isSelectedSeat(row, col) {
+      return selection.some(([r, c]) => r === row && c === col);
+    }
+
+    /**
+     * Puts a list of seats in reading order and drops repeats.
+     * Inputs: seats, a list of [row, col]. Outputs: a new sorted list.
+     * Example: sortSeats([[2, 5], [1, 3], [2, 5]]);   // [[1, 3], [2, 5]]
+     */
+    function sortSeats(seats) {
+      const sorted = [...seats].sort((a, b) => a[0] - b[0] || a[1] - b[1]);
+      return sorted.filter((seat, i) => i === 0 || seat[0] !== sorted[i - 1][0] || seat[1] !== sorted[i - 1][1]);
+    }
+
+    /**
+     * Tells whether the selection is one unbroken run of seats in one row.
+     * Purpose: such a selection is sent as a range ("reserve 3 4-7"), the same
+     *   as a drag, whether it was dragged or clicked seat by seat.
+     * Inputs: none (reads selection). Outputs: true or false.
+     * Example: isRun();
+     */
+    function isRun() {
+      return selection.length > 1 && selection.every(([r, c], i) =>
+        i === 0 || (r === selection[0][0] && c === selection[i - 1][1] + 1));
+    }
+
+    /**
+     * Describes the selection in words.
+     * Inputs: none (reads selection).
+     * How it works: groups neighbouring seats in a row into runs, so the text
+     *   stays short however the seats were picked.
+     * Outputs: text such as "row 3, seat 5", "row 3, seats 4 to 7" or
+     *   "row 2 seats 3–5; row 5 seat 7".
+     * Example: describeSelection();
+     */
+    function describeSelection() {
+      if (selection.length === 1) return `row ${selection[0][0]}, seat ${selection[0][1]}`;
+      if (isRun()) return `row ${selection[0][0]}, seats ${selection[0][1]} to ${selection[selection.length - 1][1]}`;
+      const runs = [];
+      for (const [r, c] of selection) {
+        const last = runs[runs.length - 1];
+        if (last && last[0] === r && last[2] === c - 1) last[2] = c;
+        else runs.push([r, c, c]);
+      }
+      return runs.map(([r, a, b]) => (a === b ? `row ${r} seat ${a}` : `row ${r} seats ${a}–${b}`)).join("; ");
+    }
+
+    /**
      * Shows or hides the bar under the grid that offers to reserve the selection.
-     * Purpose: after a click or drag, say which seats are picked and ask the
-     *   user to confirm before anything is reserved.
-     * How it works: any selection (one seat or more) shows the bar with the row,
-     *   the seats and a "Reserve 1 seat" or "Reserve N seats" button; while the
-     *   pointer is still down, or with nothing selected, the bar is hidden.
+     * Purpose: say which seats are picked and ask the user to confirm before
+     *   anything is reserved.
+     * How it works: any selection shows the bar with the seats and a "Reserve 1
+     *   seat" or "Reserve N seats" button; while the pointer is still down, or
+     *   with nothing selected, the bar is hidden.
      * Inputs: none (reads selection). Outputs: nothing returned.
      * Example: drawSelectionBar();
      */
     function drawSelectionBar() {
-      const show = selection !== null && dragStart === null;
+      const show = selection.length > 0 && dragStart === null;
       $("selection-bar").hidden = !show;
       if (!show) return;
-      const [row, first, last] = selection;
-      const count = last - first + 1;
-      $("selection-text").textContent = count === 1 ? `Row ${row}, seat ${first}` : `Row ${row}, seats ${first}–${last}`;
-      $("selection-reserve").textContent = count === 1 ? "Reserve 1 seat" : `Reserve ${count} seats`;
+      const text = describeSelection();
+      $("selection-text").textContent = text.charAt(0).toUpperCase() + text.slice(1);
+      $("selection-reserve").textContent = selection.length === 1 ? "Reserve 1 seat" : `Reserve ${selection.length} seats`;
     }
 
     /**
@@ -325,33 +380,43 @@
      * Purpose: click and drag picks consecutive available seats in one row.
      * How it works: starts at the seat the drag began on and walks one seat at a
      *   time toward the column under the pointer, stopping before the first
-     *   reserved seat, so the selection never jumps over a taken seat.
+     *   reserved seat, so a drag never jumps over a taken seat.
      * Inputs: row, the drag's row; anchorCol, where it started; toCol, the
      *   column under the pointer now (all counted from 1).
-     * Outputs: [row, firstCol, lastCol] with firstCol <= lastCol.
-     * Example: selectionFor(3, 4, 7);   // [3, 4, 7] when seats 4 to 7 are free
+     * Outputs: the seats as a list of [row, col], left to right.
+     * Example: dragSeats(3, 4, 7);   // [[3, 4], [3, 5], [3, 6], [3, 7]] when free
      */
-    function selectionFor(row, anchorCol, toCol) {
+    function dragSeats(row, anchorCol, toCol) {
       const step = toCol >= anchorCol ? 1 : -1;
       let end = anchorCol;
       while (end !== toCol && room[row - 1][end + step - 1] === 0) end += step;
-      return [row, Math.min(anchorCol, end), Math.max(anchorCol, end)];
+      const seats = [];
+      for (let c = Math.min(anchorCol, end); c <= Math.max(anchorCol, end); c++) seats.push([row, c]);
+      return seats;
     }
 
     /**
      * Sends the selection to the reserve function.
-     * Purpose: reserve every selected seat in one request.
-     * How it works: runs "reserve row first-last" through the command loop, which
-     *   calls reserveSeats(): all the seats are reserved, or none if one was taken
-     *   in the meantime. The selection is then cleared.
+     * Purpose: reserve every selected seat in one request, all or nothing.
+     * How it works: one seat runs "reserve row col"; an unbroken run in one row
+     *   runs "reserve row first-last" (reserveSeats(), as for a drag); any other
+     *   mix runs "reserve row col row col ..." (reserveSeatList()). If a seat was
+     *   taken in the meantime, none are reserved. The selection is then cleared.
      * Inputs: none (reads selection). Outputs: a promise that resolves when done.
      * Example: await reserveSelection();
      */
     async function reserveSelection() {
-      if (selection === null) return;
-      const [row, first, last] = selection;
-      selection = null;
-      await runCommand(first === last ? `reserve ${row} ${first}` : `reserve ${row} ${first}-${last}`);
+      if (selection.length === 0) return;
+      const seats = selection;
+      const run = isRun();
+      selection = [];
+      if (seats.length === 1) {
+        await runCommand(`reserve ${seats[0][0]} ${seats[0][1]}`);
+      } else if (run) {
+        await runCommand(`reserve ${seats[0][0]} ${seats[0][1]}-${seats[seats.length - 1][1]}`);
+      } else {
+        await runCommand(`reserve ${seats.map(([r, c]) => `${r} ${c}`).join(" ")}`);
+      }
     }
 
     /**
@@ -360,32 +425,50 @@
      * Example: clearSelection();
      */
     function clearSelection() {
-      selection = null;
+      selection = [];
       dragStart = null;
+      setStatus("INFO: Selection cleared. Nothing was reserved.");
       drawGrid();
     }
 
     /**
+     * Adds an available seat to the selection, or takes it out if it is already in.
+     * Inputs: row and col, counted from 1. Outputs: nothing returned.
+     * Example: toggleSeat(3, 5);
+     */
+    function toggleSeat(row, col) {
+      selection = isSelectedSeat(row, col)
+        ? selection.filter(([r, c]) => r !== row || c !== col)
+        : sortSeats([...selection, [row, col]]);
+      selectionChanged();
+    }
+
+    /**
      * Handles a click on a seat.
-     * Purpose: click an available seat to select it (then confirm with Reserve);
-     *   click a reserved seat twice to cancel it, so one stray click can't drop a booking.
-     * How it works: an available seat becomes the selection. The first click on
-     *   a reserved seat arms it for three seconds; a second click runs "cancel row col".
+     * Purpose: click available seats to select them (then confirm with Reserve);
+     *   click a reserved seat twice to cancel it, so one stray click can't drop a
+     *   booking. While seats are selected, clicking a reserved seat does nothing.
+     * How it works: an available seat is toggled in the selection. With nothing
+     *   selected, the first click on a reserved seat arms it for three seconds and
+     *   a second click runs "cancel row col".
      * Inputs: row and col, counted from 1.
      * Outputs: a promise that resolves when the server has answered.
      * Example: await seatClicked(3, 5);
      */
     async function seatClicked(row, col) {
-      clearTimeout(armTimer);
       const reserved = room[row - 1][col - 1] === 1;
       if (!reserved) {
+        clearTimeout(armTimer);
         armed = null;
-        selection = [row, col, col];
-        selectionMade();
+        toggleSeat(row, col);
+      } else if (selection.length > 0) {
+        return;
       } else if (armed !== null && armed[0] === row && armed[1] === col) {
+        clearTimeout(armTimer);
         armed = null;
         await runCommand(`cancel ${row} ${col}`);
       } else {
+        clearTimeout(armTimer);
         armed = [row, col];
         setStatus(`INFO: Click row ${row}, seat ${col} again to cancel its reservation.`);
         drawGrid();
@@ -405,24 +488,26 @@
     }
 
     /**
-     * Asks the user to confirm the selection.
+     * Reports the selection after it changes.
      * Purpose: nothing is reserved until the Reserve button is pressed, for one
-     *   seat or many.
-     * How it works: says in the status line which seats are selected, then
-     *   redraws the grid, which shows the selection bar.
+     *   seat or many, so the status line says what is waiting.
+     * How it works: names the selected seats (or says the selection is empty),
+     *   then redraws the grid, which shows or hides the selection bar.
      * Inputs: none (reads selection). Outputs: nothing returned.
-     * Example: selectionMade();
+     * Example: selectionChanged();
      */
-    function selectionMade() {
-      const [row, first, last] = selection;
-      setStatus(first === last
-        ? `INFO: Selected row ${row}, seat ${first}. Press Reserve to book it.`
-        : `INFO: Selected row ${row}, seats ${first} to ${last}. Press Reserve to book them.`);
+    function selectionChanged() {
+      if (selection.length === 0) {
+        setStatus("INFO: No seats selected.");
+      } else {
+        setStatus(`INFO: Selected ${describeSelection()}. Press Reserve to book ${selection.length === 1 ? "it" : "them"}.`);
+      }
       drawGrid();
     }
 
-    // Click and drag: press on an available seat, drag along the row, release.
-    // One seat or many, the selection waits for the Reserve button in the bar.
+    // Pressing on an available seat: release on the same seat to add it to (or
+    // take it out of) the selection; drag along the row to add the seats in
+    // between. Either way, nothing is booked until Reserve is pressed.
     $("grid").addEventListener("pointerdown", (event) => {
       if (event.button !== 0) return;
       const at = seatAt(event.clientX, event.clientY);
@@ -431,16 +516,18 @@
       clearTimeout(armTimer);
       armed = null;
       dragStart = at;
-      selection = [at[0], at[1], at[1]];
-      drawGrid();
+      dragBase = selection;
+      dragMoved = false;
     });
 
     document.addEventListener("pointermove", (event) => {
       if (dragStart === null) return;
       const at = seatAt(event.clientX, event.clientY);
       if (at === null || at[0] !== dragStart[0]) return;
-      const next = selectionFor(dragStart[0], dragStart[1], at[1]);
-      if (next[1] !== selection[1] || next[2] !== selection[2]) {
+      if (!dragMoved && at[1] === dragStart[1]) return;
+      dragMoved = true;
+      const next = sortSeats([...dragBase, ...dragSeats(dragStart[0], dragStart[1], at[1])]);
+      if (JSON.stringify(next) !== JSON.stringify(selection)) {
         selection = next;
         drawGrid();
       }
@@ -448,12 +535,18 @@
 
     document.addEventListener("pointerup", () => {
       if (dragStart === null) return;
+      const [row, col] = dragStart;
       dragStart = null;
-      selectionMade();
+      if (dragMoved) {
+        selectionChanged();
+      } else {
+        selection = dragBase;
+        toggleSeat(row, col);
+      }
     });
 
     document.addEventListener("keydown", (event) => {
-      if (event.key === "Escape" && selection !== null) clearSelection();
+      if (event.key === "Escape" && selection.length > 0) clearSelection();
     });
 
     // Reserved seats: click twice to cancel. Available seats are handled by the

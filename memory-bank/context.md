@@ -33,7 +33,7 @@ mae, as a prototype. The people using it are whoever runs it at a terminal.
 
 All state is one 8 x 10 2D array of `0` (available) and `1` (occupied), §2. No objects or classes represent the data (§2). The only JSON metadata is the save file: `{date, savedAt, room}`, with the room as the 2D array.
 
-- `src/seats.ts`: the room and the functions in §4, plus `reserveSeats()` for a range in one row (all or nothing). Pure apart from `displayRoom`; reserve and cancel change the room in place and return a status message.
+- `src/seats.ts`: the room and the functions in §4, plus `reserveSeats()` for a range in one row and `reserveSeatList()` for any list of seats (both all or nothing). Pure apart from `displayRoom`; reserve and cancel change the room in place and return a status message.
 - `src/cli.ts`: `runCommand` turns one typed line into a status message (testable without a terminal); `startLoop` reads lines and prints results.
 - `src/main.ts`: entry point.
 - `src/server.ts`: local `node:http` server for the web page. Its JSON API sends commands through `runCommand`, so the page reuses the CLI's checks and messages; it also handles new room and save/load of reservations/<date>.json. `src/web.ts` starts it.

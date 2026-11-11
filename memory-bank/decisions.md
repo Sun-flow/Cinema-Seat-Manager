@@ -3,6 +3,13 @@
 > **Last updated**: 2026-11-11
 > Decisions with lasting consequences, newest first. Each entry: date and title, decision, rationale, alternatives considered, status. The repo has no other decision log, so this is it.
 
+### 2026-11-11: Clicks build a selection of any free seats
+
+- **Decision**: clicking an available seat adds it to the selection (clicking it again removes it); seats don't have to be neighbours or in the same row. A drag adds its run to the selection. While anything is selected, clicking a reserved seat does nothing; with nothing selected it still arms cancel. Reserve sends one seat as `reserve r c`, an unbroken run in one row as `reserve r a-b` (so clicking seats in order behaves like a drag), and anything else as `reserve r c r c ...`, which goes to the new `reserveSeatList()`: all or nothing, each seat through `reserveSeat()`.
+- **Rationale**: mae's request on 2026-11-11.
+- **Alternatives**: none considered.
+- **Status**: active, pending mae's review on PR #3.
+
 ### 2026-11-11: Click and drag reserves consecutive seats, all or nothing
 
 - **Decision**: on the page, pressing on an available seat and dragging along its row selects consecutive available seats; the selection stops before the first reserved seat and ignores other rows. Every selection, a single click included, shows a bar with a Reserve button; nothing is reserved until it is pressed (mae, 2026-11-11: single clicks ask for confirmation like groups). The page sends `reserve <row> <a>-<b>`, which `runCommand` passes to the new `reserveSeats()` in `src/seats.ts`. That checks every seat first and then calls `reserveSeat()` for each, so either all are reserved or none.

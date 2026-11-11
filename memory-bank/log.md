@@ -3,6 +3,10 @@
 > **Last updated**: 2026-11-11
 > Session handoffs, newest first. One short entry per session: date, where it ran, what changed (link the PR or commit), and what was left open.
 
+### 2026-11-11: multi-seat click selection (Claude Code, cloud)
+
+- PR #2 merged before the single-click confirmation commit landed, so that commit went to PR #3 (branch claude/project-thread-i5uee8, merged with main rather than force-pushed). Then mae asked for click selection of any free seats; added `reserveSeatList()`, the `reserve r c r c ...` command and the page's toggle selection (see `decisions.md`). 68 tests pass. Left open: mae's review of PR #3.
+
 ### 2026-11-11: click and drag group reservations (Claude Code, cloud)
 
 - mae asked for click and drag selection of consecutive seats in one row, submitted to the reserve function. Added `reserveSeats()`, the `reserve <row> <a>-<b>` command and the page's drag selection with a Reserve bar (see `decisions.md`). 62 tests pass; drag checked with Playwright. Same branch and PR #2.
