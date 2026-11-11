@@ -33,6 +33,12 @@ npm run web
 
 Then open http://localhost:3000. It runs the same seat functions as the command line: click available seats to select them (anywhere in the room), or press and drag along a row to select a run of neighbouring seats, then confirm with **Reserve**. Click a selected seat again to drop it; click a reserved seat twice to cancel it, and use the buttons for the adjacent pair search, occupancy and the text view. **Save** writes the room to `reservations/<date>.json`; when the server starts it loads today's file if there is one. Set `PORT` to use another port. The page loads Tailwind CSS from a CDN, so the browser needs internet access.
 
+## On GitHub Pages
+
+The page is also published at https://sun-flow.github.io/Cinema-Seat-Manager/. On every push to `main`, `.github/workflows/pages.yml` runs the type check and tests, builds the page with `npm run build:pages` and deploys it. There is no server on Pages, so the build puts the same seat code into the page itself (`scripts/build-pages.ts`, `web/pages-backend.js`). **Save** keeps the room in your browser and downloads `<date>.json`; **Load** opens a saved file. Rooms on Pages are per browser and never reach the repo.
+
+To try the Pages build locally: `npm run build:pages`, then serve the dist folder (for example `python3 -m http.server -d dist`).
+
 ## Check it
 
 ```

@@ -3,6 +3,10 @@
 > **Last updated**: 2026-11-11
 > Session handoffs, newest first. One short entry per session: date, where it ran, what changed (link the PR or commit), and what was left open.
 
+### 2026-11-11: GitHub Pages (Claude Code, cloud)
+
+- PR #3 merged. mae turned on Pages (source: GitHub Actions) and asked for the build and workflow. Added `scripts/build-pages.ts`, `web/pages-backend.js`, `src/savefile.ts` (moved out of the server), `.github/workflows/pages.yml` and `test/pages.test.ts`; 72 tests pass. Checked the built page in Playwright: save, reload, load, bad file. Left open: the first real deploy runs after merge.
+
 ### 2026-11-11: multi-seat click selection (Claude Code, cloud)
 
 - PR #2 merged before the single-click confirmation commit landed, so that commit went to PR #3 (branch claude/project-thread-i5uee8, merged with main rather than force-pushed). Then mae asked for click selection of any free seats; added `reserveSeatList()`, the `reserve r c r c ...` command and the page's toggle selection (see `decisions.md`). 68 tests pass. Left open: mae's review of PR #3.

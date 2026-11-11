@@ -603,6 +603,8 @@
 
     $("date").textContent = today();
     $("file-date").textContent = today();
+    // The GitHub Pages copy fires this after loading a file (web/pages-backend.js).
+    window.addEventListener("seat-manager:reload", () => call("/api/state"));
     call("/api/state");
   </script>
 </body>
