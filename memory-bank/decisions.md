@@ -5,9 +5,9 @@
 
 ### 2026-11-11: Click and drag reserves consecutive seats, all or nothing
 
-- **Decision**: on the page, pressing on an available seat and dragging along its row selects consecutive available seats; the selection stops before the first reserved seat and ignores other rows. Releasing on one seat reserves it at once; two or more show a bar with a Reserve button. The page sends `reserve <row> <a>-<b>`, which `runCommand` passes to the new `reserveSeats()` in `src/seats.ts`. That checks every seat first and then calls `reserveSeat()` for each, so either all are reserved or none.
+- **Decision**: on the page, pressing on an available seat and dragging along its row selects consecutive available seats; the selection stops before the first reserved seat and ignores other rows. Every selection, a single click included, shows a bar with a Reserve button; nothing is reserved until it is pressed (mae, 2026-11-11: single clicks ask for confirmation like groups). The page sends `reserve <row> <a>-<b>`, which `runCommand` passes to the new `reserveSeats()` in `src/seats.ts`. That checks every seat first and then calls `reserveSeat()` for each, so either all are reserved or none.
 - **Rationale**: mae asked to select several consecutive seats in one row by dragging and submit them to the reserve function. All or nothing avoids half a group booking if a seat was taken in the meantime. Routing through the CLI command keeps one code path and makes it testable.
-- **Alternatives**: reserving on release without a confirm step (a sloppy drag would book seats); one request per seat from the page (partial bookings possible).
+- **Alternatives**: reserving on release without a confirm step (a sloppy drag would book seats; single clicks did this at first, until mae asked for confirmation there too); one request per seat from the page (partial bookings possible).
 - **Status**: active, pending mae's review.
 
 ### 2026-11-11: Web interface served by a small local Node server

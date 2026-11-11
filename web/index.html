@@ -68,7 +68,7 @@
         </div>
       </div>
       <ul class="mt-8 flex flex-wrap justify-center gap-x-6 gap-y-2 text-xs text-zinc-500">
-        <li class="flex items-center gap-2"><span class="grid size-5 place-items-center rounded-md border border-emerald-400/40 bg-emerald-400/10 font-mono text-[10px] text-emerald-300">L</span>Available, click or drag to reserve</li>
+        <li class="flex items-center gap-2"><span class="grid size-5 place-items-center rounded-md border border-emerald-400/40 bg-emerald-400/10 font-mono text-[10px] text-emerald-300">L</span>Available, click or drag to select</li>
         <li class="flex items-center gap-2"><span class="grid size-5 place-items-center rounded-md border border-rose-400/40 bg-rose-500/20 font-mono text-[10px] text-rose-200">X</span>Reserved, click twice to cancel</li>
         <li class="flex items-center gap-2"><span class="grid size-5 place-items-center rounded-md border border-sky-300/80 bg-sky-400/25 font-mono text-[10px] text-sky-100">L</span>Selected</li>
         <li class="flex items-center gap-2"><span class="size-5 rounded-md border border-amber-300/70 bg-emerald-400/10 ring-2 ring-amber-300/60"></span>Adjacent pair</li>
@@ -302,20 +302,22 @@
 
     /**
      * Shows or hides the bar under the grid that offers to reserve the selection.
-     * Purpose: after a drag, say which seats are picked and let the user submit them.
-     * How it works: a selection of two or more seats shows the bar with the row,
-     *   the columns and a "Reserve N seats" button; otherwise the bar is hidden.
+     * Purpose: after a click or drag, say which seats are picked and ask the
+     *   user to confirm before anything is reserved.
+     * How it works: any selection (one seat or more) shows the bar with the row,
+     *   the seats and a "Reserve 1 seat" or "Reserve N seats" button; while the
+     *   pointer is still down, or with nothing selected, the bar is hidden.
      * Inputs: none (reads selection). Outputs: nothing returned.
      * Example: drawSelectionBar();
      */
     function drawSelectionBar() {
-      const show = selection !== null && dragStart === null && selection[2] > selection[1];
+      const show = selection !== null && dragStart === null;
       $("selection-bar").hidden = !show;
       if (!show) return;
       const [row, first, last] = selection;
       const count = last - first + 1;
-      $("selection-text").textContent = `Row ${row}, seats ${first}–${last}`;
-      $("selection-reserve").textContent = `Reserve ${count} seats`;
+      $("selection-text").textContent = count === 1 ? `Row ${row}, seat ${first}` : `Row ${row}, seats ${first}–${last}`;
+      $("selection-reserve").textContent = count === 1 ? "Reserve 1 seat" : `Reserve ${count} seats`;
     }
 
     /**
@@ -365,9 +367,9 @@
 
     /**
      * Handles a click on a seat.
-     * Purpose: click an available seat to reserve it; click a reserved seat
-     *   twice to cancel it, so one stray click can't drop a booking.
-     * How it works: an available seat runs "reserve row col". The first click on
+     * Purpose: click an available seat to select it (then confirm with Reserve);
+     *   click a reserved seat twice to cancel it, so one stray click can't drop a booking.
+     * How it works: an available seat becomes the selection. The first click on
      *   a reserved seat arms it for three seconds; a second click runs "cancel row col".
      * Inputs: row and col, counted from 1.
      * Outputs: a promise that resolves when the server has answered.
@@ -378,7 +380,8 @@
       const reserved = room[row - 1][col - 1] === 1;
       if (!reserved) {
         armed = null;
-        await runCommand(`reserve ${row} ${col}`);
+        selection = [row, col, col];
+        selectionMade();
       } else if (armed !== null && armed[0] === row && armed[1] === col) {
         armed = null;
         await runCommand(`cancel ${row} ${col}`);
@@ -401,9 +404,25 @@
       return seat ? [Number(seat.dataset.row), Number(seat.dataset.col)] : null;
     }
 
+    /**
+     * Asks the user to confirm the selection.
+     * Purpose: nothing is reserved until the Reserve button is pressed, for one
+     *   seat or many.
+     * How it works: says in the status line which seats are selected, then
+     *   redraws the grid, which shows the selection bar.
+     * Inputs: none (reads selection). Outputs: nothing returned.
+     * Example: selectionMade();
+     */
+    function selectionMade() {
+      const [row, first, last] = selection;
+      setStatus(first === last
+        ? `INFO: Selected row ${row}, seat ${first}. Press Reserve to book it.`
+        : `INFO: Selected row ${row}, seats ${first} to ${last}. Press Reserve to book them.`);
+      drawGrid();
+    }
+
     // Click and drag: press on an available seat, drag along the row, release.
-    // One seat (a plain click) is reserved straight away; two or more wait for
-    // the Reserve button in the selection bar.
+    // One seat or many, the selection waits for the Reserve button in the bar.
     $("grid").addEventListener("pointerdown", (event) => {
       if (event.button !== 0) return;
       const at = seatAt(event.clientX, event.clientY);
@@ -430,13 +449,7 @@
     document.addEventListener("pointerup", () => {
       if (dragStart === null) return;
       dragStart = null;
-      if (selection[1] === selection[2]) {
-        reserveSelection();
-      } else {
-        const [row, first, last] = selection;
-        setStatus(`INFO: Selected row ${row}, seats ${first} to ${last}. Press Reserve to book them.`);
-        drawGrid();
-      }
+      selectionMade();
     });
 
     document.addEventListener("keydown", (event) => {
@@ -444,7 +457,7 @@
     });
 
     // Reserved seats: click twice to cancel. Available seats are handled by the
-    // pointer events above, except a keyboard press (detail 0), which reserves.
+    // pointer events above, except a keyboard press (detail 0), which selects.
     $("grid").addEventListener("click", (event) => {
       const seat = event.target.closest("button[data-row]");
       if (!seat) return;

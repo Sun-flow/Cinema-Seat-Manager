@@ -6,6 +6,7 @@
 ### 2026-11-11: click and drag group reservations (Claude Code, cloud)
 
 - mae asked for click and drag selection of consecutive seats in one row, submitted to the reserve function. Added `reserveSeats()`, the `reserve <row> <a>-<b>` command and the page's drag selection with a Reserve bar (see `decisions.md`). 62 tests pass; drag checked with Playwright. Same branch and PR #2.
+- Then, at mae's request, a single click also selects and waits for Reserve instead of booking at once.
 - Also published a browser-only demo of the page as a claude.ai artifact (not in the repo).
 
 ### 2026-11-11: web interface (Claude Code, cloud)
