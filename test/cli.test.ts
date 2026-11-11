@@ -126,3 +126,28 @@ describe("startLoop", () => {
     assert.match(printed, /Goodbye\.\n$/);
   });
 });
+
+describe("reserve with a column range", () => {
+  test("reserves seats a to b in one row", () => {
+    const room = emptyRoom();
+    assert.deepEqual(runCommand(room, "reserve 2 3-5"), ["SUCCESS: Seats row 2, columns 3 to 5 reserved (3 seats).", false]);
+    assert.deepEqual(room[1], [0, 0, 1, 1, 1, 0, 0, 0, 0, 0]);
+  });
+
+  test("reports bad ranges as invalid input", () => {
+    const room = emptyRoom();
+    assert.deepEqual(runCommand(room, "reserve 2 3-11"), [
+      'INVALID INPUT: Column must be a whole number from 1 to 10 (got "11").',
+      false,
+    ]);
+    assert.deepEqual(runCommand(room, "reserve 2 3-"), [
+      'INVALID INPUT: Column must be a whole number from 1 to 10 (got "3-").',
+      false,
+    ]);
+    assert.deepEqual(runCommand(room, "cancel 2 3-5"), [
+      'INVALID INPUT: Column must be a whole number from 1 to 10 (got "3-5").',
+      false,
+    ]);
+    assert.deepEqual(room, emptyRoom());
+  });
+});

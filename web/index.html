@@ -60,9 +60,17 @@
         <p class="mt-3 text-center text-[11px] font-medium uppercase tracking-[0.4em] text-zinc-500">Screen</p>
       </div>
       <div id="grid" class="mx-auto grid w-fit gap-1 sm:gap-2" role="grid" aria-label="Seats: rows 1 to 8, columns 1 to 10"></div>
+      <div id="selection-bar" hidden class="mx-auto mt-6 flex max-w-md flex-wrap items-center justify-between gap-3 rounded-xl border border-sky-400/30 bg-sky-400/5 px-4 py-2.5">
+        <p id="selection-text" class="text-sm text-sky-100 tabular-nums"></p>
+        <div class="flex gap-2">
+          <button id="selection-clear" class="btn">Clear</button>
+          <button id="selection-reserve" class="btn border-sky-400/50 bg-sky-400/15 text-sky-50 hover:bg-sky-400/25 hover:border-sky-300/70">Reserve</button>
+        </div>
+      </div>
       <ul class="mt-8 flex flex-wrap justify-center gap-x-6 gap-y-2 text-xs text-zinc-500">
-        <li class="flex items-center gap-2"><span class="grid size-5 place-items-center rounded-md border border-emerald-400/40 bg-emerald-400/10 font-mono text-[10px] text-emerald-300">L</span>Available, click to reserve</li>
+        <li class="flex items-center gap-2"><span class="grid size-5 place-items-center rounded-md border border-emerald-400/40 bg-emerald-400/10 font-mono text-[10px] text-emerald-300">L</span>Available, click or drag to reserve</li>
         <li class="flex items-center gap-2"><span class="grid size-5 place-items-center rounded-md border border-rose-400/40 bg-rose-500/20 font-mono text-[10px] text-rose-200">X</span>Reserved, click twice to cancel</li>
+        <li class="flex items-center gap-2"><span class="grid size-5 place-items-center rounded-md border border-sky-300/80 bg-sky-400/25 font-mono text-[10px] text-sky-100">L</span>Selected</li>
         <li class="flex items-center gap-2"><span class="size-5 rounded-md border border-amber-300/70 bg-emerald-400/10 ring-2 ring-amber-300/60"></span>Adjacent pair</li>
       </ul>
     </section>
@@ -113,6 +121,10 @@
     let armed = null;
     /** The timer that disarms the seat above. */
     let armTimer = 0;
+    /** The seats picked by click and drag, as [row, firstCol, lastCol], or null. */
+    let selection = null;
+    /** While the pointer is held down: [row, col] of the seat the drag started on, or null. */
+    let dragStart = null;
     /** Whether "New room" is waiting for a second click. */
     let newArmed = false;
 
@@ -177,6 +189,7 @@
     function render(data) {
       if (Array.isArray(data.room)) {
         if (JSON.stringify(data.room) !== JSON.stringify(room)) showPair = false;
+        if (selection !== null && data.room[selection[0] - 1].slice(selection[1] - 1, selection[2]).includes(1)) selection = null;
         room = data.room;
         pair = data.pair ?? null;
         $("available").textContent = data.available;
@@ -258,22 +271,25 @@
         for (let c = 1; c <= COLS; c++) {
           const reserved = room[r - 1]?.[c - 1] === 1;
           const isArmed = armed !== null && armed[0] === r && armed[1] === c;
+          const isSelected = selection !== null && selection[0] === r && c >= selection[1] && c <= selection[2];
           const seat = document.createElement("button");
           seat.type = "button";
           seat.dataset.row = r;
           seat.dataset.col = c;
-          const state = reserved ? (isArmed ? "reserved, click again to cancel" : "reserved") : "available";
+          const state = reserved ? (isArmed ? "reserved, click again to cancel" : "reserved") : isSelected ? "available, selected" : "available";
           seat.title = `Row ${r}, seat ${c}: ${state}`;
           seat.setAttribute("aria-label", seat.title);
           seat.textContent = isArmed ? "?" : reserved ? "X" : "L";
           seat.className = [
-            "grid size-[1.625rem] place-items-center rounded-t-lg rounded-b-md border font-mono text-[11px] transition duration-150",
+            "grid size-[1.625rem] touch-none select-none place-items-center rounded-t-lg rounded-b-md border font-mono text-[11px] transition duration-150",
             "sm:size-10 sm:text-xs focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-zinc-300",
             isArmed
               ? "border-rose-300 bg-rose-500 text-white shadow-[0_0_18px_rgba(244,63,94,0.45)]"
               : reserved
                 ? "border-rose-400/40 bg-rose-500/20 text-rose-200 hover:bg-rose-500/35"
-                : "border-emerald-400/40 bg-emerald-400/10 text-emerald-300 hover:bg-emerald-400/25 hover:border-emerald-300/70 hover:-translate-y-0.5",
+                : isSelected
+                  ? "border-sky-300/80 bg-sky-400/25 text-sky-100 -translate-y-0.5"
+                  : "border-emerald-400/40 bg-emerald-400/10 text-emerald-300 hover:bg-emerald-400/25 hover:border-emerald-300/70 hover:-translate-y-0.5",
             inPair(r, c) ? "ring-2 ring-amber-300/70 border-amber-300/80" : "",
           ].join(" ");
           cells.push(seat);
@@ -281,6 +297,70 @@
         cells.push(label(r));
       }
       grid.replaceChildren(...cells);
+      drawSelectionBar();
+    }
+
+    /**
+     * Shows or hides the bar under the grid that offers to reserve the selection.
+     * Purpose: after a drag, say which seats are picked and let the user submit them.
+     * How it works: a selection of two or more seats shows the bar with the row,
+     *   the columns and a "Reserve N seats" button; otherwise the bar is hidden.
+     * Inputs: none (reads selection). Outputs: nothing returned.
+     * Example: drawSelectionBar();
+     */
+    function drawSelectionBar() {
+      const show = selection !== null && dragStart === null && selection[2] > selection[1];
+      $("selection-bar").hidden = !show;
+      if (!show) return;
+      const [row, first, last] = selection;
+      const count = last - first + 1;
+      $("selection-text").textContent = `Row ${row}, seats ${first}–${last}`;
+      $("selection-reserve").textContent = `Reserve ${count} seats`;
+    }
+
+    /**
+     * Works out which seats a drag covers.
+     * Purpose: click and drag picks consecutive available seats in one row.
+     * How it works: starts at the seat the drag began on and walks one seat at a
+     *   time toward the column under the pointer, stopping before the first
+     *   reserved seat, so the selection never jumps over a taken seat.
+     * Inputs: row, the drag's row; anchorCol, where it started; toCol, the
+     *   column under the pointer now (all counted from 1).
+     * Outputs: [row, firstCol, lastCol] with firstCol <= lastCol.
+     * Example: selectionFor(3, 4, 7);   // [3, 4, 7] when seats 4 to 7 are free
+     */
+    function selectionFor(row, anchorCol, toCol) {
+      const step = toCol >= anchorCol ? 1 : -1;
+      let end = anchorCol;
+      while (end !== toCol && room[row - 1][end + step - 1] === 0) end += step;
+      return [row, Math.min(anchorCol, end), Math.max(anchorCol, end)];
+    }
+
+    /**
+     * Sends the selection to the reserve function.
+     * Purpose: reserve every selected seat in one request.
+     * How it works: runs "reserve row first-last" through the command loop, which
+     *   calls reserveSeats(): all the seats are reserved, or none if one was taken
+     *   in the meantime. The selection is then cleared.
+     * Inputs: none (reads selection). Outputs: a promise that resolves when done.
+     * Example: await reserveSelection();
+     */
+    async function reserveSelection() {
+      if (selection === null) return;
+      const [row, first, last] = selection;
+      selection = null;
+      await runCommand(first === last ? `reserve ${row} ${first}` : `reserve ${row} ${first}-${last}`);
+    }
+
+    /**
+     * Clears the selection without reserving anything.
+     * Inputs: none. Outputs: nothing returned.
+     * Example: clearSelection();
+     */
+    function clearSelection() {
+      selection = null;
+      dragStart = null;
+      drawGrid();
     }
 
     /**
@@ -310,10 +390,71 @@
       }
     }
 
+    /**
+     * Finds the seat button under a pointer position.
+     * Inputs: x and y, in page viewport coordinates.
+     * Outputs: [row, col] counted from 1, or null when no seat is there.
+     * Example: seatAt(event.clientX, event.clientY);
+     */
+    function seatAt(x, y) {
+      const seat = document.elementFromPoint(x, y)?.closest?.("button[data-row]");
+      return seat ? [Number(seat.dataset.row), Number(seat.dataset.col)] : null;
+    }
+
+    // Click and drag: press on an available seat, drag along the row, release.
+    // One seat (a plain click) is reserved straight away; two or more wait for
+    // the Reserve button in the selection bar.
+    $("grid").addEventListener("pointerdown", (event) => {
+      if (event.button !== 0) return;
+      const at = seatAt(event.clientX, event.clientY);
+      if (at === null || room[at[0] - 1][at[1] - 1] !== 0) return;
+      event.preventDefault();
+      clearTimeout(armTimer);
+      armed = null;
+      dragStart = at;
+      selection = [at[0], at[1], at[1]];
+      drawGrid();
+    });
+
+    document.addEventListener("pointermove", (event) => {
+      if (dragStart === null) return;
+      const at = seatAt(event.clientX, event.clientY);
+      if (at === null || at[0] !== dragStart[0]) return;
+      const next = selectionFor(dragStart[0], dragStart[1], at[1]);
+      if (next[1] !== selection[1] || next[2] !== selection[2]) {
+        selection = next;
+        drawGrid();
+      }
+    });
+
+    document.addEventListener("pointerup", () => {
+      if (dragStart === null) return;
+      dragStart = null;
+      if (selection[1] === selection[2]) {
+        reserveSelection();
+      } else {
+        const [row, first, last] = selection;
+        setStatus(`INFO: Selected row ${row}, seats ${first} to ${last}. Press Reserve to book them.`);
+        drawGrid();
+      }
+    });
+
+    document.addEventListener("keydown", (event) => {
+      if (event.key === "Escape" && selection !== null) clearSelection();
+    });
+
+    // Reserved seats: click twice to cancel. Available seats are handled by the
+    // pointer events above, except a keyboard press (detail 0), which reserves.
     $("grid").addEventListener("click", (event) => {
       const seat = event.target.closest("button[data-row]");
-      if (seat) seatClicked(Number(seat.dataset.row), Number(seat.dataset.col));
+      if (!seat) return;
+      const row = Number(seat.dataset.row);
+      const col = Number(seat.dataset.col);
+      if (room[row - 1][col - 1] === 1 || event.detail === 0) seatClicked(row, col);
     });
+
+    $("selection-reserve").addEventListener("click", () => reserveSelection());
+    $("selection-clear").addEventListener("click", () => clearSelection());
 
     $("seat-form").addEventListener("submit", (event) => {
       event.preventDefault();

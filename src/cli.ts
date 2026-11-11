@@ -12,6 +12,7 @@ import {
   occupancyMessage,
   pairMessage,
   reserveSeat,
+  reserveSeats,
 } from "./seats.ts";
 
 /** The text printed by the "help" command and at start-up. */
@@ -19,6 +20,7 @@ export const HELP_TEXT = [
   "Commands:",
   "  show                 Show the screening room",
   `  reserve <row> <col>  Reserve a seat (row 1-${ROWS}, column 1-${COLS})`,
+  "  reserve <row> <a>-<b> Reserve seats a to b in one row, all or none",
   "  cancel <row> <col>   Cancel a seat reservation",
   "  stats                Show how many seats are occupied and available",
   "  pair                 Find the first two adjacent available seats in a row",
@@ -59,7 +61,8 @@ export function parseSeatNumber(text: string, label: string, max: number): numbe
  *   can be tested.
  * How it works: splits the line into words (case and extra spaces don't matter),
  *   picks the command by its first word, checks the number of arguments and
- *   their values, then calls the matching seat function. Anything it can't run
+ *   their values, then calls the matching seat function. "reserve" also takes
+ *   a column range such as "4-7", which goes to reserveSeats(). Anything it can't run
  *   is reported as INVALID INPUT. The room is changed in place by reserve and
  *   cancel.
  * Inputs: room, the 2D seat array; line, the text the user typed.
@@ -100,6 +103,14 @@ export function runCommand(room: number[][], line: string): [message: string, qu
       }
       const row = parseSeatNumber(args[0], "Row", ROWS);
       if (typeof row === "string") return [row, false];
+      const range = /^(\d+)-(\d+)$/.exec(args[1]);
+      if (command === "reserve" && range !== null) {
+        const fromCol = parseSeatNumber(range[1], "Column", COLS);
+        if (typeof fromCol === "string") return [fromCol, false];
+        const toCol = parseSeatNumber(range[2], "Column", COLS);
+        if (typeof toCol === "string") return [toCol, false];
+        return [reserveSeats(room, row, fromCol, toCol), false];
+      }
       const col = parseSeatNumber(args[1], "Column", COLS);
       if (typeof col === "string") return [col, false];
       const message = command === "reserve" ? reserveSeat(room, row, col) : cancelReservation(room, row, col);
