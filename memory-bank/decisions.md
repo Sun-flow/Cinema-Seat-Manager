@@ -1,7 +1,21 @@
 # Decisions
 
-> **Last updated**: 2026-11-10
+> **Last updated**: 2026-11-11
 > Decisions with lasting consequences, newest first. Each entry: date and title, decision, rationale, alternatives considered, status. The repo has no other decision log, so this is it.
+
+### 2026-11-11: Click and drag reserves consecutive seats, all or nothing
+
+- **Decision**: on the page, pressing on an available seat and dragging along its row selects consecutive available seats; the selection stops before the first reserved seat and ignores other rows. Releasing on one seat reserves it at once; two or more show a bar with a Reserve button. The page sends `reserve <row> <a>-<b>`, which `runCommand` passes to the new `reserveSeats()` in `src/seats.ts`. That checks every seat first and then calls `reserveSeat()` for each, so either all are reserved or none.
+- **Rationale**: mae asked to select several consecutive seats in one row by dragging and submit them to the reserve function. All or nothing avoids half a group booking if a seat was taken in the meantime. Routing through the CLI command keeps one code path and makes it testable.
+- **Alternatives**: reserving on release without a confirm step (a sloppy drag would book seats); one request per seat from the page (partial bookings possible).
+- **Status**: active, pending mae's review.
+
+### 2026-11-11: Web interface served by a small local Node server
+
+- **Decision**: `npm run web` starts a `node:http` server (`src/server.ts`, no new dependencies) that serves `web/index.html` and a JSON API. Seat changes go through the CLI's `runCommand`, so the page has no seat logic of its own. Tailwind is loaded in the browser from the jsDelivr CDN (`@tailwindcss/browser`, pinned). Save writes reservations/<YYYY-MM-DD>.json (`{date, savedAt, room}`); the server loads today's file at start. Clicking a free seat reserves it; a reserved seat needs two clicks to cancel.
+- **Rationale**: mae asked for an HTML + Tailwind page with clickable seats that saves to reservations/[date].json. A static page can't write files, so a local server is needed; reusing `runCommand` keeps one implementation of the rules.
+- **Alternatives**: a Tailwind CLI build step (an extra dependency and build); a static page that downloads the JSON instead of saving (doesn't write into the folder); one click to cancel (too easy to drop a booking by mistake).
+- **Status**: active, pending mae's review.
 
 ### 2026-11-10: Node.js runs the TypeScript directly; `node:test` for tests
 

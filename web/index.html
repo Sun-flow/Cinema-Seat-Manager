@@ -1,0 +1,503 @@
+<!doctype html>
+<html lang="en" class="bg-zinc-950">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Cinema Seat Manager</title>
+  <!-- Tailwind CSS, compiled in the browser. Served by src/server.ts (npm run web). -->
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.3.3"></script>
+  <style type="text/tailwindcss">
+    @theme {
+      --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+      --font-mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    }
+    .btn {
+      @apply rounded-lg border border-zinc-800 bg-zinc-900 px-3.5 py-2 text-sm font-medium text-zinc-200
+        transition hover:border-zinc-700 hover:bg-zinc-800 focus-visible:outline-2 focus-visible:outline-offset-2
+        focus-visible:outline-zinc-400 disabled:opacity-40;
+    }
+    .field {
+      @apply w-16 rounded-lg border border-zinc-800 bg-zinc-950 px-2.5 py-2 text-sm text-zinc-100 tabular-nums
+        placeholder:text-zinc-600 focus:border-zinc-500 focus:outline-none;
+    }
+  </style>
+</head>
+<body class="min-h-screen bg-zinc-950 font-sans text-zinc-300 antialiased">
+  <main class="mx-auto flex max-w-3xl flex-col gap-8 px-4 py-10 sm:py-14">
+
+    <!-- Title, date and save -->
+    <header class="flex flex-wrap items-end justify-between gap-4">
+      <div>
+        <p class="text-xs font-medium uppercase tracking-[0.25em] text-zinc-500">Screening room</p>
+        <h1 class="mt-1 text-2xl font-light tracking-tight text-zinc-50">Cinema Seat Manager</h1>
+      </div>
+      <div class="flex items-center gap-2">
+        <span id="date" class="text-sm text-zinc-500 tabular-nums"></span>
+        <button id="save" class="btn">Save</button>
+      </div>
+    </header>
+
+    <!-- Occupancy (§4.5) -->
+    <section aria-label="Occupancy" class="grid grid-cols-3 gap-px overflow-hidden rounded-xl border border-zinc-800 bg-zinc-800">
+      <div class="bg-zinc-950 px-4 py-3">
+        <p class="text-xs text-zinc-500">Available</p>
+        <p id="available" class="mt-0.5 text-2xl font-light text-emerald-300 tabular-nums">–</p>
+      </div>
+      <div class="bg-zinc-950 px-4 py-3">
+        <p class="text-xs text-zinc-500">Reserved</p>
+        <p id="occupied" class="mt-0.5 text-2xl font-light text-rose-300 tabular-nums">–</p>
+      </div>
+      <div class="bg-zinc-950 px-4 py-3">
+        <p class="text-xs text-zinc-500">Full</p>
+        <p id="percent" class="mt-0.5 text-2xl font-light text-zinc-100 tabular-nums">–</p>
+      </div>
+    </section>
+
+    <!-- The room (§3, §4.2) -->
+    <section aria-label="Seating plan" class="rounded-2xl border border-zinc-800/80 bg-zinc-900/40 px-2 pb-6 pt-8 sm:px-8">
+      <div class="mx-auto mb-10 max-w-md">
+        <div class="h-1.5 rounded-full bg-gradient-to-r from-transparent via-zinc-300/70 to-transparent shadow-[0_6px_30px_rgba(228,228,231,0.25)]"></div>
+        <p class="mt-3 text-center text-[11px] font-medium uppercase tracking-[0.4em] text-zinc-500">Screen</p>
+      </div>
+      <div id="grid" class="mx-auto grid w-fit gap-1 sm:gap-2" role="grid" aria-label="Seats: rows 1 to 8, columns 1 to 10"></div>
+      <div id="selection-bar" hidden class="mx-auto mt-6 flex max-w-md flex-wrap items-center justify-between gap-3 rounded-xl border border-sky-400/30 bg-sky-400/5 px-4 py-2.5">
+        <p id="selection-text" class="text-sm text-sky-100 tabular-nums"></p>
+        <div class="flex gap-2">
+          <button id="selection-clear" class="btn">Clear</button>
+          <button id="selection-reserve" class="btn border-sky-400/50 bg-sky-400/15 text-sky-50 hover:bg-sky-400/25 hover:border-sky-300/70">Reserve</button>
+        </div>
+      </div>
+      <ul class="mt-8 flex flex-wrap justify-center gap-x-6 gap-y-2 text-xs text-zinc-500">
+        <li class="flex items-center gap-2"><span class="grid size-5 place-items-center rounded-md border border-emerald-400/40 bg-emerald-400/10 font-mono text-[10px] text-emerald-300">L</span>Available, click or drag to reserve</li>
+        <li class="flex items-center gap-2"><span class="grid size-5 place-items-center rounded-md border border-rose-400/40 bg-rose-500/20 font-mono text-[10px] text-rose-200">X</span>Reserved, click twice to cancel</li>
+        <li class="flex items-center gap-2"><span class="grid size-5 place-items-center rounded-md border border-sky-300/80 bg-sky-400/25 font-mono text-[10px] text-sky-100">L</span>Selected</li>
+        <li class="flex items-center gap-2"><span class="size-5 rounded-md border border-amber-300/70 bg-emerald-400/10 ring-2 ring-amber-300/60"></span>Adjacent pair</li>
+      </ul>
+    </section>
+
+    <!-- Status message for the last operation -->
+    <section aria-label="Status" class="flex flex-col gap-2">
+      <p id="status" role="status" aria-live="polite" class="min-h-11 rounded-xl border border-zinc-800 bg-zinc-900/60 px-4 py-3 text-sm">Connecting…</p>
+      <pre id="text-view" class="hidden overflow-x-auto rounded-xl border border-zinc-800 bg-zinc-900/60 px-4 py-3 font-mono text-xs leading-relaxed text-zinc-300"></pre>
+    </section>
+
+    <!-- Every function, by hand -->
+    <section aria-label="Actions" class="flex flex-col gap-4 rounded-2xl border border-zinc-800/80 p-4 sm:p-5">
+      <form id="seat-form" class="flex flex-wrap items-center gap-2" novalidate>
+        <label class="sr-only" for="row">Row</label>
+        <input id="row" class="field" inputmode="numeric" placeholder="Row" autocomplete="off">
+        <label class="sr-only" for="col">Column</label>
+        <input id="col" class="field" inputmode="numeric" placeholder="Seat" autocomplete="off">
+        <button class="btn" data-command="reserve">Reserve</button>
+        <button class="btn" data-command="cancel">Cancel</button>
+      </form>
+      <div class="h-px bg-zinc-800/80"></div>
+      <div class="flex flex-wrap gap-2">
+        <button id="pair" class="btn">Find adjacent pair</button>
+        <button id="stats" class="btn">Occupancy</button>
+        <button id="show" class="btn">Text view</button>
+        <button id="new" class="btn ml-auto text-zinc-400">New room</button>
+      </div>
+    </section>
+
+    <footer class="text-center text-xs text-zinc-600">Rows 1–8 · Seats 1–10 · Saves to reservations/<span id="file-date">[date]</span>.json</footer>
+  </main>
+
+  <script type="module">
+    // The page keeps no seat logic of its own: every change goes to the server
+    // (src/server.ts), which runs the seat functions in src/seats.ts and sends
+    // back the room as the same 8 x 10 2D array of 0s and 1s.
+
+    const ROWS = 8;
+    const COLS = 10;
+
+    /** The latest room from the server: ROWS arrays of COLS numbers, 1 = reserved. */
+    let room = [];
+    /** The first adjacent pair as [[row, col], [row, col]], or null. */
+    let pair = null;
+    /** Whether the pair is highlighted (after "Find adjacent pair", until the room changes). */
+    let showPair = false;
+    /** The reserved seat waiting for a second click to cancel, as [row, col], or null. */
+    let armed = null;
+    /** The timer that disarms the seat above. */
+    let armTimer = 0;
+    /** The seats picked by click and drag, as [row, firstCol, lastCol], or null. */
+    let selection = null;
+    /** While the pointer is held down: [row, col] of the seat the drag started on, or null. */
+    let dragStart = null;
+    /** Whether "New room" is waiting for a second click. */
+    let newArmed = false;
+
+    const $ = (id) => document.getElementById(id);
+
+    /**
+     * Gives today's date as YYYY-MM-DD.
+     * Purpose: show which file Save writes to (the server uses its own clock, normally the same).
+     * Inputs: none. Outputs: a string such as "2026-11-11".
+     * Example: today();
+     */
+    function today() {
+      const d = new Date();
+      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+    }
+
+    /**
+     * Sends one request to the server and redraws the page from its reply.
+     * Purpose: the single path every action takes.
+     * How it works: sends a GET or POST (with an optional JSON body), then hands
+     *   the JSON reply ({message, room, occupied, available, pair}) to render().
+     * Inputs: path, such as "/api/command"; body, an object to send as JSON, or
+     *   null for a GET.
+     * Outputs: a promise of the status message, or an ERROR message if the
+     *   server can't be reached.
+     * Example: await call("/api/command", { command: "reserve 3 5" });
+     */
+    async function call(path, body = null) {
+      try {
+        const response = await fetch(path, body === null
+          ? { method: path === "/api/state" ? "GET" : "POST" }
+          : { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+        const data = await response.json();
+        render(data);
+        return data.message;
+      } catch {
+        setStatus("ERROR: Can't reach the server. Is `npm run web` still running?");
+        return "ERROR";
+      }
+    }
+
+    /**
+     * Runs one command-loop command on the server.
+     * Purpose: reserve, cancel, show, stats and pair all go through the CLI's runCommand().
+     * Inputs: command, the text the CLI would take, such as "cancel 3 5".
+     * Outputs: a promise of the status message.
+     * Example: await runCommand("pair");
+     */
+    function runCommand(command) {
+      return call("/api/command", { command });
+    }
+
+    /**
+     * Redraws everything from a server reply.
+     * Purpose: keep the page in step with the server's room.
+     * How it works: stores the room and pair, updates the counts, the grid and
+     *   the status message. Any change to the seats hides the pair highlight.
+     * Inputs: data, the reply {message, room, occupied, available, pair}.
+     * Outputs: nothing returned; the page is updated.
+     * Example: render(await (await fetch("/api/state")).json());
+     */
+    function render(data) {
+      if (Array.isArray(data.room)) {
+        if (JSON.stringify(data.room) !== JSON.stringify(room)) showPair = false;
+        if (selection !== null && data.room[selection[0] - 1].slice(selection[1] - 1, selection[2]).includes(1)) selection = null;
+        room = data.room;
+        pair = data.pair ?? null;
+        $("available").textContent = data.available;
+        $("occupied").textContent = data.occupied;
+        $("percent").textContent = `${Math.round((data.occupied / (ROWS * COLS)) * 100)}%`;
+        drawGrid();
+      }
+      if (data.message) setStatus(data.message);
+      if (data.message && !data.message.includes("\n") && !$("text-view").classList.contains("hidden")) {
+        $("text-view").classList.add("hidden");
+      }
+    }
+
+    /**
+     * Shows a status message, coloured by its outcome.
+     * Purpose: every operation ends with a clear message (§5), as in the terminal.
+     * How it works: messages from "show" are several lines, so they go to the
+     *   text view; everything else replaces the status line. The colour comes
+     *   from the first word: SUCCESS, FAILED, INVALID INPUT, INFO or ERROR.
+     * Inputs: message, the text from the server.
+     * Outputs: nothing returned; the page is updated.
+     * Example: setStatus("SUCCESS: Seat row 3, column 5 reserved.");
+     */
+    function setStatus(message) {
+      const status = $("status");
+      if (message.includes("\n")) {
+        $("text-view").textContent = message;
+        $("text-view").classList.remove("hidden");
+        message = "INFO: The room as the command line shows it.";
+      }
+      const tones = [
+        ["SUCCESS", "border-emerald-500/30 text-emerald-200"],
+        ["FAILED", "border-rose-500/30 text-rose-200"],
+        ["INVALID", "border-amber-400/30 text-amber-200"],
+        ["ERROR", "border-rose-500/50 text-rose-200"],
+        ["INFO", "border-zinc-700 text-zinc-200"],
+      ];
+      const tone = tones.find(([word]) => message.startsWith(word))?.[1] ?? "border-zinc-800 text-zinc-300";
+      status.className = `min-h-11 rounded-xl border bg-zinc-900/60 px-4 py-3 text-sm ${tone}`;
+      status.textContent = message;
+    }
+
+    /**
+     * Tells whether a seat is one of the highlighted pair.
+     * Inputs: row and col, counted from 1. Outputs: true or false.
+     * Example: inPair(1, 2);
+     */
+    function inPair(row, col) {
+      return showPair && pair !== null && pair.some(([r, c]) => r === row && c === col);
+    }
+
+    /**
+     * Draws the seating grid from the room array.
+     * Purpose: the visual display of the room (§3): row and column numbers
+     *   around the seats, each seat coloured and labelled L (available) or X (reserved).
+     * How it works: rebuilds the grid: a header of column numbers, then for each
+     *   row its number, ten seat buttons and the number again. Each button has
+     *   a label a screen reader reads, such as "Row 3, seat 5, available".
+     * Inputs: none (reads room, pair and armed). Outputs: nothing returned.
+     * Example: drawGrid();
+     */
+    function drawGrid() {
+      const grid = $("grid");
+      grid.style.gridTemplateColumns = `1rem repeat(${COLS}, auto) 1rem`;
+      const cells = [];
+      const label = (text) => {
+        const el = document.createElement("span");
+        el.className = "grid place-items-center text-[11px] text-zinc-600 tabular-nums";
+        el.textContent = text;
+        return el;
+      };
+
+      cells.push(label(""));
+      for (let c = 1; c <= COLS; c++) cells.push(label(c));
+      cells.push(label(""));
+
+      for (let r = 1; r <= ROWS; r++) {
+        cells.push(label(r));
+        for (let c = 1; c <= COLS; c++) {
+          const reserved = room[r - 1]?.[c - 1] === 1;
+          const isArmed = armed !== null && armed[0] === r && armed[1] === c;
+          const isSelected = selection !== null && selection[0] === r && c >= selection[1] && c <= selection[2];
+          const seat = document.createElement("button");
+          seat.type = "button";
+          seat.dataset.row = r;
+          seat.dataset.col = c;
+          const state = reserved ? (isArmed ? "reserved, click again to cancel" : "reserved") : isSelected ? "available, selected" : "available";
+          seat.title = `Row ${r}, seat ${c}: ${state}`;
+          seat.setAttribute("aria-label", seat.title);
+          seat.textContent = isArmed ? "?" : reserved ? "X" : "L";
+          seat.className = [
+            "grid size-[1.625rem] touch-none select-none place-items-center rounded-t-lg rounded-b-md border font-mono text-[11px] transition duration-150",
+            "sm:size-10 sm:text-xs focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-zinc-300",
+            isArmed
+              ? "border-rose-300 bg-rose-500 text-white shadow-[0_0_18px_rgba(244,63,94,0.45)]"
+              : reserved
+                ? "border-rose-400/40 bg-rose-500/20 text-rose-200 hover:bg-rose-500/35"
+                : isSelected
+                  ? "border-sky-300/80 bg-sky-400/25 text-sky-100 -translate-y-0.5"
+                  : "border-emerald-400/40 bg-emerald-400/10 text-emerald-300 hover:bg-emerald-400/25 hover:border-emerald-300/70 hover:-translate-y-0.5",
+            inPair(r, c) ? "ring-2 ring-amber-300/70 border-amber-300/80" : "",
+          ].join(" ");
+          cells.push(seat);
+        }
+        cells.push(label(r));
+      }
+      grid.replaceChildren(...cells);
+      drawSelectionBar();
+    }
+
+    /**
+     * Shows or hides the bar under the grid that offers to reserve the selection.
+     * Purpose: after a drag, say which seats are picked and let the user submit them.
+     * How it works: a selection of two or more seats shows the bar with the row,
+     *   the columns and a "Reserve N seats" button; otherwise the bar is hidden.
+     * Inputs: none (reads selection). Outputs: nothing returned.
+     * Example: drawSelectionBar();
+     */
+    function drawSelectionBar() {
+      const show = selection !== null && dragStart === null && selection[2] > selection[1];
+      $("selection-bar").hidden = !show;
+      if (!show) return;
+      const [row, first, last] = selection;
+      const count = last - first + 1;
+      $("selection-text").textContent = `Row ${row}, seats ${first}–${last}`;
+      $("selection-reserve").textContent = `Reserve ${count} seats`;
+    }
+
+    /**
+     * Works out which seats a drag covers.
+     * Purpose: click and drag picks consecutive available seats in one row.
+     * How it works: starts at the seat the drag began on and walks one seat at a
+     *   time toward the column under the pointer, stopping before the first
+     *   reserved seat, so the selection never jumps over a taken seat.
+     * Inputs: row, the drag's row; anchorCol, where it started; toCol, the
+     *   column under the pointer now (all counted from 1).
+     * Outputs: [row, firstCol, lastCol] with firstCol <= lastCol.
+     * Example: selectionFor(3, 4, 7);   // [3, 4, 7] when seats 4 to 7 are free
+     */
+    function selectionFor(row, anchorCol, toCol) {
+      const step = toCol >= anchorCol ? 1 : -1;
+      let end = anchorCol;
+      while (end !== toCol && room[row - 1][end + step - 1] === 0) end += step;
+      return [row, Math.min(anchorCol, end), Math.max(anchorCol, end)];
+    }
+
+    /**
+     * Sends the selection to the reserve function.
+     * Purpose: reserve every selected seat in one request.
+     * How it works: runs "reserve row first-last" through the command loop, which
+     *   calls reserveSeats(): all the seats are reserved, or none if one was taken
+     *   in the meantime. The selection is then cleared.
+     * Inputs: none (reads selection). Outputs: a promise that resolves when done.
+     * Example: await reserveSelection();
+     */
+    async function reserveSelection() {
+      if (selection === null) return;
+      const [row, first, last] = selection;
+      selection = null;
+      await runCommand(first === last ? `reserve ${row} ${first}` : `reserve ${row} ${first}-${last}`);
+    }
+
+    /**
+     * Clears the selection without reserving anything.
+     * Inputs: none. Outputs: nothing returned.
+     * Example: clearSelection();
+     */
+    function clearSelection() {
+      selection = null;
+      dragStart = null;
+      drawGrid();
+    }
+
+    /**
+     * Handles a click on a seat.
+     * Purpose: click an available seat to reserve it; click a reserved seat
+     *   twice to cancel it, so one stray click can't drop a booking.
+     * How it works: an available seat runs "reserve row col". The first click on
+     *   a reserved seat arms it for three seconds; a second click runs "cancel row col".
+     * Inputs: row and col, counted from 1.
+     * Outputs: a promise that resolves when the server has answered.
+     * Example: await seatClicked(3, 5);
+     */
+    async function seatClicked(row, col) {
+      clearTimeout(armTimer);
+      const reserved = room[row - 1][col - 1] === 1;
+      if (!reserved) {
+        armed = null;
+        await runCommand(`reserve ${row} ${col}`);
+      } else if (armed !== null && armed[0] === row && armed[1] === col) {
+        armed = null;
+        await runCommand(`cancel ${row} ${col}`);
+      } else {
+        armed = [row, col];
+        setStatus(`INFO: Click row ${row}, seat ${col} again to cancel its reservation.`);
+        drawGrid();
+        armTimer = setTimeout(() => { armed = null; drawGrid(); }, 3000);
+      }
+    }
+
+    /**
+     * Finds the seat button under a pointer position.
+     * Inputs: x and y, in page viewport coordinates.
+     * Outputs: [row, col] counted from 1, or null when no seat is there.
+     * Example: seatAt(event.clientX, event.clientY);
+     */
+    function seatAt(x, y) {
+      const seat = document.elementFromPoint(x, y)?.closest?.("button[data-row]");
+      return seat ? [Number(seat.dataset.row), Number(seat.dataset.col)] : null;
+    }
+
+    // Click and drag: press on an available seat, drag along the row, release.
+    // One seat (a plain click) is reserved straight away; two or more wait for
+    // the Reserve button in the selection bar.
+    $("grid").addEventListener("pointerdown", (event) => {
+      if (event.button !== 0) return;
+      const at = seatAt(event.clientX, event.clientY);
+      if (at === null || room[at[0] - 1][at[1] - 1] !== 0) return;
+      event.preventDefault();
+      clearTimeout(armTimer);
+      armed = null;
+      dragStart = at;
+      selection = [at[0], at[1], at[1]];
+      drawGrid();
+    });
+
+    document.addEventListener("pointermove", (event) => {
+      if (dragStart === null) return;
+      const at = seatAt(event.clientX, event.clientY);
+      if (at === null || at[0] !== dragStart[0]) return;
+      const next = selectionFor(dragStart[0], dragStart[1], at[1]);
+      if (next[1] !== selection[1] || next[2] !== selection[2]) {
+        selection = next;
+        drawGrid();
+      }
+    });
+
+    document.addEventListener("pointerup", () => {
+      if (dragStart === null) return;
+      dragStart = null;
+      if (selection[1] === selection[2]) {
+        reserveSelection();
+      } else {
+        const [row, first, last] = selection;
+        setStatus(`INFO: Selected row ${row}, seats ${first} to ${last}. Press Reserve to book them.`);
+        drawGrid();
+      }
+    });
+
+    document.addEventListener("keydown", (event) => {
+      if (event.key === "Escape" && selection !== null) clearSelection();
+    });
+
+    // Reserved seats: click twice to cancel. Available seats are handled by the
+    // pointer events above, except a keyboard press (detail 0), which reserves.
+    $("grid").addEventListener("click", (event) => {
+      const seat = event.target.closest("button[data-row]");
+      if (!seat) return;
+      const row = Number(seat.dataset.row);
+      const col = Number(seat.dataset.col);
+      if (room[row - 1][col - 1] === 1 || event.detail === 0) seatClicked(row, col);
+    });
+
+    $("selection-reserve").addEventListener("click", () => reserveSelection());
+    $("selection-clear").addEventListener("click", () => clearSelection());
+
+    $("seat-form").addEventListener("submit", (event) => {
+      event.preventDefault();
+      const command = event.submitter?.dataset.command ?? "reserve";
+      runCommand(`${command} ${$("row").value} ${$("col").value}`);
+    });
+
+    $("pair").addEventListener("click", async () => {
+      await runCommand("pair");
+      showPair = true;
+      drawGrid();
+    });
+    $("stats").addEventListener("click", () => runCommand("stats"));
+    $("show").addEventListener("click", () => {
+      if ($("text-view").classList.contains("hidden")) {
+        runCommand("show");
+      } else {
+        $("text-view").classList.add("hidden");
+      }
+    });
+    $("save").addEventListener("click", () => call("/api/save"));
+
+    $("new").addEventListener("click", async () => {
+      if (!newArmed) {
+        newArmed = true;
+        $("new").textContent = "Clear every seat?";
+        $("new").classList.add("text-rose-300", "border-rose-500/40");
+        setTimeout(() => {
+          newArmed = false;
+          $("new").textContent = "New room";
+          $("new").classList.remove("text-rose-300", "border-rose-500/40");
+        }, 3000);
+        return;
+      }
+      newArmed = false;
+      $("new").textContent = "New room";
+      $("new").classList.remove("text-rose-300", "border-rose-500/40");
+      await call("/api/new");
+    });
+
+    $("date").textContent = today();
+    $("file-date").textContent = today();
+    call("/api/state");
+  </script>
+</body>
+</html>

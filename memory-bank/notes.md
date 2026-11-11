@@ -1,6 +1,6 @@
 # Notes
 
-> **Last updated**: 2026-11-10
+> **Last updated**: 2026-11-11
 > Things learned the hard way. Add to this as soon as you learn something the next session would otherwise rediscover. Keep each note to a line or two, and remove notes that stop being true.
 
 ## Working with mae
@@ -14,6 +14,8 @@
 
 - `node src/main.ts` and `node --test` run TypeScript directly with no warning on Node 22.18+. Imports between files must use the .ts extension (`tsconfig.json` allows it); `erasableSyntaxOnly` makes `tsc` reject enums and other syntax Node can't strip.
 - `scripts/check-memory.py` needs only Python 3. It fails on any backticked path in the bank or `AGENTS.md` that doesn't exist, so don't backtick paths for files that haven't been created yet.
+
+- The cloud container can't reach cdn.jsdelivr.net (403 from the proxy). To screenshot the web page there, `npm i @tailwindcss/browser` in a scratch folder and have Playwright route the CDN URL to its dist/index.global.js.
 
 ## Conventions
 

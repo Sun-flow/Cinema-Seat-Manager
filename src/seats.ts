@@ -159,6 +159,52 @@ export function reserveSeat(room: number[][], row: number, col: number): string 
 }
 
 /**
+ * Reserves several consecutive seats in one row, all or nothing.
+ *
+ * Purpose: book a group of neighbouring seats in one go (the web page's click
+ *   and drag selection, or "reserve 3 4-7" in the command loop).
+ * How it works: checks both ends of the range, then checks that every seat
+ *   from fromCol to toCol is available. If any is taken, nothing changes. If
+ *   all are free, it calls reserveSeat() for each one, so every seat goes
+ *   through the same reserve function. fromCol and toCol can be given in
+ *   either order. The room is changed in place.
+ * Inputs: room, the 2D seat array; row, counted from 1; fromCol and toCol,
+ *   the first and last column of the range, counted from 1.
+ * Outputs: a status message that starts with SUCCESS, FAILED (one or more
+ *   seats already reserved; it names them) or INVALID INPUT (no such seat).
+ * Example:
+ *   reserveSeats(room, 3, 4, 7);   // "SUCCESS: Seats row 3, columns 4 to 7 reserved (4 seats)."
+ */
+export function reserveSeats(room: number[][], row: number, fromCol: number, toCol: number): string {
+  const error = seatError(row, fromCol) ?? seatError(row, toCol);
+  if (error !== null) {
+    return error;
+  }
+  const first = Math.min(fromCol, toCol);
+  const last = Math.max(fromCol, toCol);
+  if (first === last) {
+    return reserveSeat(room, row, first);
+  }
+
+  const taken: number[] = [];
+  for (let col = first; col <= last; col++) {
+    const [r, c] = toIndex(row, col);
+    if (room[r][c] === OCCUPIED) {
+      taken.push(col);
+    }
+  }
+  if (taken.length > 0) {
+    const which = taken.length === 1 ? `column ${taken[0]} is` : `columns ${taken.join(", ")} are`;
+    return `FAILED: In row ${row}, ${which} already reserved, so no seats were reserved.`;
+  }
+
+  for (let col = first; col <= last; col++) {
+    reserveSeat(room, row, col);
+  }
+  return `SUCCESS: Seats row ${row}, columns ${first} to ${last} reserved (${last - first + 1} seats).`;
+}
+
+/**
  * Cancels the reservation of one seat.
  *
  * Purpose: free a seat that was booked (docs/spec.md §4.4).

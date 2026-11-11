@@ -3,6 +3,16 @@
 > **Last updated**: 2026-11-11
 > Session handoffs, newest first. One short entry per session: date, where it ran, what changed (link the PR or commit), and what was left open.
 
+### 2026-11-11: click and drag group reservations (Claude Code, cloud)
+
+- mae asked for click and drag selection of consecutive seats in one row, submitted to the reserve function. Added `reserveSeats()`, the `reserve <row> <a>-<b>` command and the page's drag selection with a Reserve bar (see `decisions.md`). 62 tests pass; drag checked with Playwright. Same branch and PR #2.
+- Also published a browser-only demo of the page as a claude.ai artifact (not in the repo).
+
+### 2026-11-11: web interface (Claude Code, cloud)
+
+- mae asked for an HTML + Tailwind web interface with clickable seats, a dark theme and saving to reservations/[date].json. Added `src/server.ts`, `src/web.ts`, `web/index.html` and `test/server.test.ts` (56 tests pass, typecheck clean); checked the page with Playwright at desktop and phone widths. Branch claude/project-thread-i5uee8.
+- Left open: mae's review, and the two open questions in `status.md`.
+
 ### 2026-11-11: program built (Claude Code, cloud)
 
 - mae approved `docs/plan.md`. Built `src/seats.ts`, `src/cli.ts`, `src/main.ts` and the tests in `test/`, on PR #1 (branch claude/project-thread-nb962l). 42 tests pass; typecheck is clean; the loop was tried by hand with piped input.

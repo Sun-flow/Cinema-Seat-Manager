@@ -16,6 +16,7 @@ import {
   occupancyMessage,
   pairMessage,
   reserveSeat,
+  reserveSeats,
   seatError,
 } from "../src/seats.ts";
 import { emptyRoom, fullRoom, nearlyFullRoom, partialRoom } from "./fixtures.ts";
@@ -270,5 +271,41 @@ describe("cancelReservation", () => {
     assert.equal(cancelReservation(room, 9, 1), "INVALID INPUT: Row must be a whole number from 1 to 8 (got 9).");
     assert.equal(cancelReservation(room, 1, 0), "INVALID INPUT: Column must be a whole number from 1 to 10 (got 0).");
     assert.deepEqual(room, fullRoom());
+  });
+});
+
+describe("reserveSeats", () => {
+  test("reserves every seat in the range, in either order", () => {
+    const room = emptyRoom();
+    assert.equal(reserveSeats(room, 3, 4, 7), "SUCCESS: Seats row 3, columns 4 to 7 reserved (4 seats).");
+    assert.deepEqual(room[2], [0, 0, 0, 1, 1, 1, 1, 0, 0, 0]);
+    assert.equal(reserveSeats(room, 5, 10, 9), "SUCCESS: Seats row 5, columns 9 to 10 reserved (2 seats).");
+    assert.deepEqual(room[4], [0, 0, 0, 0, 0, 0, 0, 0, 1, 1]);
+  });
+
+  test("a range of one seat is a normal reservation", () => {
+    const room = emptyRoom();
+    assert.equal(reserveSeats(room, 2, 6, 6), "SUCCESS: Seat row 2, column 6 reserved.");
+  });
+
+  test("changes nothing when any seat in the range is taken", () => {
+    const room = partialRoom();
+    const before = partialRoom();
+    assert.equal(
+      reserveSeats(room, 3, 1, 4),
+      "FAILED: In row 3, columns 1, 3 are already reserved, so no seats were reserved.",
+    );
+    assert.equal(reserveSeats(room, 4, 1, 4), "FAILED: In row 4, column 4 is already reserved, so no seats were reserved.");
+    assert.deepEqual(room, before);
+  });
+
+  test("fails on a full room and rejects seats outside the room", () => {
+    const room = fullRoom();
+    assert.equal(
+      reserveSeats(room, 8, 1, 2),
+      "FAILED: In row 8, columns 1, 2 are already reserved, so no seats were reserved.",
+    );
+    assert.equal(reserveSeats(emptyRoom(), 1, 9, 11), "INVALID INPUT: Column must be a whole number from 1 to 10 (got 11).");
+    assert.equal(reserveSeats(emptyRoom(), 0, 1, 2), "INVALID INPUT: Row must be a whole number from 1 to 8 (got 0).");
   });
 });
