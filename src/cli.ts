@@ -5,6 +5,7 @@
 
 import { createInterface } from "node:readline";
 import {
+  type Seat,
   COLS,
   ROWS,
   cancelReservation,
@@ -12,6 +13,7 @@ import {
   occupancyMessage,
   pairMessage,
   reserveSeat,
+  reserveSeatList,
   reserveSeats,
 } from "./seats.ts";
 
@@ -21,6 +23,7 @@ export const HELP_TEXT = [
   "  show                 Show the screening room",
   `  reserve <row> <col>  Reserve a seat (row 1-${ROWS}, column 1-${COLS})`,
   "  reserve <row> <a>-<b> Reserve seats a to b in one row, all or none",
+  "  reserve <row> <col> <row> <col> ...  Reserve several seats, all or none",
   "  cancel <row> <col>   Cancel a seat reservation",
   "  stats                Show how many seats are occupied and available",
   "  pair                 Find the first two adjacent available seats in a row",
@@ -62,7 +65,8 @@ export function parseSeatNumber(text: string, label: string, max: number): numbe
  * How it works: splits the line into words (case and extra spaces don't matter),
  *   picks the command by its first word, checks the number of arguments and
  *   their values, then calls the matching seat function. "reserve" also takes
- *   a column range such as "4-7", which goes to reserveSeats(). Anything it can't run
+ *   a column range such as "4-7", which goes to reserveSeats(), or several
+ *   row and column pairs such as "2 3 5 7", which go to reserveSeatList(). Anything it can't run
  *   is reported as INVALID INPUT. The room is changed in place by reserve and
  *   cancel.
  * Inputs: room, the 2D seat array; line, the text the user typed.
@@ -95,6 +99,17 @@ export function runCommand(room: number[][], line: string): [message: string, qu
     }
     case "reserve":
     case "cancel": {
+      if (command === "reserve" && args.length > 2 && args.length % 2 === 0) {
+        const seats: Seat[] = [];
+        for (let i = 0; i < args.length; i += 2) {
+          const row = parseSeatNumber(args[i], "Row", ROWS);
+          if (typeof row === "string") return [row, false];
+          const col = parseSeatNumber(args[i + 1], "Column", COLS);
+          if (typeof col === "string") return [col, false];
+          seats.push([row, col]);
+        }
+        return [reserveSeatList(room, seats), false];
+      }
       if (args.length !== 2) {
         return [
           `INVALID INPUT: "${command}" needs a row and a column, for example "${command} 3 5" (got ${args.length} argument${args.length === 1 ? "" : "s"}).`,

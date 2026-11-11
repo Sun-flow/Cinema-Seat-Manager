@@ -16,6 +16,7 @@ import {
   occupancyMessage,
   pairMessage,
   reserveSeat,
+  reserveSeatList,
   reserveSeats,
   seatError,
 } from "../src/seats.ts";
@@ -307,5 +308,42 @@ describe("reserveSeats", () => {
     );
     assert.equal(reserveSeats(emptyRoom(), 1, 9, 11), "INVALID INPUT: Column must be a whole number from 1 to 10 (got 11).");
     assert.equal(reserveSeats(emptyRoom(), 0, 1, 2), "INVALID INPUT: Row must be a whole number from 1 to 8 (got 0).");
+  });
+});
+
+describe("reserveSeatList", () => {
+  test("reserves seats anywhere in the room", () => {
+    const room = emptyRoom();
+    assert.equal(
+      reserveSeatList(room, [[2, 3], [5, 7], [2, 9]]),
+      "SUCCESS: Reserved 3 seats: row 2 column 3, row 5 column 7, row 2 column 9.",
+    );
+    assert.equal(room[1][2] + room[4][6] + room[1][8], 3);
+    assert.deepEqual(countOccupancy(room), [3, 77]);
+  });
+
+  test("one seat is a normal reservation", () => {
+    assert.equal(reserveSeatList(emptyRoom(), [[4, 4]]), "SUCCESS: Seat row 4, column 4 reserved.");
+  });
+
+  test("changes nothing when any seat is taken", () => {
+    const room = nearlyFullRoom();
+    const free: [number, number][] = [];
+    room.forEach((row, r) => row.forEach((seat, c) => { if (seat === 0) free.push([r + 1, c + 1]); }));
+    const taken: [number, number] = room[0][0] === 1 ? [1, 1] : [1, 2];
+    assert.equal(
+      reserveSeatList(room, [free[0], taken]),
+      `FAILED: row ${taken[0]} column ${taken[1]} is already reserved, so no seats were reserved.`,
+    );
+    assert.deepEqual(room, nearlyFullRoom());
+    assert.equal(reserveSeatList(fullRoom(), [[1, 1], [8, 10]]), "FAILED: row 1 column 1, row 8 column 10 are already reserved, so no seats were reserved.");
+  });
+
+  test("rejects empty lists, repeats and seats outside the room", () => {
+    const room = emptyRoom();
+    assert.equal(reserveSeatList(room, []), "INVALID INPUT: No seats were given.");
+    assert.equal(reserveSeatList(room, [[1, 1], [1, 1]]), "INVALID INPUT: Seat row 1, column 1 is listed more than once.");
+    assert.equal(reserveSeatList(room, [[1, 1], [9, 1]]), "INVALID INPUT: Row must be a whole number from 1 to 8 (got 9).");
+    assert.deepEqual(room, emptyRoom());
   });
 });

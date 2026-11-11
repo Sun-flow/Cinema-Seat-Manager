@@ -17,6 +17,7 @@ Then type commands at the `>` prompt:
 |---|---|
 | `show` | Shows the room: `X` occupied, `L` available. |
 | `reserve <row> <col>` | Reserves a seat, e.g. `reserve 3 5`. Rows are 1-8, columns 1-10. |
+| `reserve <row> <col> <row> <col> ...` | Reserves several seats anywhere, e.g. `reserve 2 3 5 7`. If any of them is taken, none are reserved. |
 | `reserve <row> <a>-<b>` | Reserves seats a to b in one row, e.g. `reserve 3 4-7`. If any of them is taken, none are reserved. |
 | `cancel <row> <col>` | Cancels a reservation. |
 | `stats` | Shows how many seats are occupied and available. |
@@ -30,7 +31,7 @@ Then type commands at the `>` prompt:
 npm run web
 ```
 
-Then open http://localhost:3000. It runs the same seat functions as the command line: click an available seat to reserve it, or press and drag along a row to select several neighbouring seats and press **Reserve**; click a reserved seat twice to cancel it, and use the buttons for the adjacent pair search, occupancy and the text view. **Save** writes the room to `reservations/<date>.json`; when the server starts it loads today's file if there is one. Set `PORT` to use another port. The page loads Tailwind CSS from a CDN, so the browser needs internet access.
+Then open http://localhost:3000. It runs the same seat functions as the command line: click available seats to select them (anywhere in the room), or press and drag along a row to select a run of neighbouring seats, then confirm with **Reserve**. Click a selected seat again to drop it; click a reserved seat twice to cancel it, and use the buttons for the adjacent pair search, occupancy and the text view. **Save** writes the room to `reservations/<date>.json`; when the server starts it loads today's file if there is one. Set `PORT` to use another port. The page loads Tailwind CSS from a CDN, so the browser needs internet access.
 
 ## Check it
 

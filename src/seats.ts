@@ -205,6 +205,58 @@ export function reserveSeats(room: number[][], row: number, fromCol: number, toC
 }
 
 /**
+ * Reserves any list of seats, all or nothing.
+ *
+ * Purpose: book seats picked one by one on the web page, which don't have to be
+ *   next to each other or in the same row ("reserve 2 3 5 7" in the command loop).
+ * How it works: checks every position, rejects a seat listed twice, then checks
+ *   that every seat is available. If any is taken, nothing changes. If all are
+ *   free, it calls reserveSeat() for each one. The room is changed in place.
+ * Inputs: room, the 2D seat array; seats, a list of [row, col] pairs counted from 1.
+ * Outputs: a status message that starts with SUCCESS, FAILED (one or more
+ *   seats already reserved; it names them) or INVALID INPUT (no such seat, a
+ *   repeated seat, or an empty list).
+ * Example:
+ *   reserveSeatList(room, [[2, 3], [5, 7]]);
+ *   // "SUCCESS: Reserved 2 seats: row 2 column 3, row 5 column 7."
+ */
+export function reserveSeatList(room: number[][], seats: Seat[]): string {
+  if (seats.length === 0) {
+    return "INVALID INPUT: No seats were given.";
+  }
+  const seen: string[] = [];
+  for (const [row, col] of seats) {
+    const error = seatError(row, col);
+    if (error !== null) {
+      return error;
+    }
+    const key = `${row},${col}`;
+    if (seen.includes(key)) {
+      return `INVALID INPUT: Seat row ${row}, column ${col} is listed more than once.`;
+    }
+    seen.push(key);
+  }
+  if (seats.length === 1) {
+    return reserveSeat(room, seats[0][0], seats[0][1]);
+  }
+
+  const names = (list: Seat[]): string => list.map(([row, col]) => `row ${row} column ${col}`).join(", ");
+  const taken = seats.filter(([row, col]) => {
+    const [r, c] = toIndex(row, col);
+    return room[r][c] === OCCUPIED;
+  });
+  if (taken.length > 0) {
+    const verb = taken.length === 1 ? "is" : "are";
+    return `FAILED: ${names(taken)} ${verb} already reserved, so no seats were reserved.`;
+  }
+
+  for (const [row, col] of seats) {
+    reserveSeat(room, row, col);
+  }
+  return `SUCCESS: Reserved ${seats.length} seats: ${names(seats)}.`;
+}
+
+/**
  * Cancels the reservation of one seat.
  *
  * Purpose: free a seat that was booked (docs/spec.md §4.4).
